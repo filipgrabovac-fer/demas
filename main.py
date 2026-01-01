@@ -1,3 +1,4 @@
+import json
 from typing import Literal
 from langchain_core.messages import HumanMessage
 from langchain_core.prompts import PromptTemplate
@@ -7,15 +8,17 @@ from agents.composer import composer_node, ComposerResponse
 from agents.enhancer import enhancer_node
 from agents.reviewer import reviewer_node
 from agents.supervisor import supervisor_node
-from dummy_data import dummy_data
 from states import MessagesState
-from utils import CsvChunker
+from utils import CsvChunker, JsonChunker
 
 from dotenv import load_dotenv
 load_dotenv()
 
 def supervisor_routing(state: MessagesState) -> Literal["composer", "enhancer"]:
     return state["cmd"]
+
+dummy_json_data = json.load(open("dummy.json"))
+dummy_csv_data = open("dummy.csv").read()
 
 graph = StateGraph(MessagesState)
 graph.add_node("supervisor", supervisor_node)
@@ -35,20 +38,14 @@ graph.add_edge("composer", END)
 
 compiled_graph = graph.compile()
 
-compiled_graph.get_graph().draw_mermaid_png()
-    
-
-for chunk in CsvChunker(dummy_data, 10).chunk():
+for chunk in JsonChunker(dummy_json_data, 10).chunk():
     prompt_template = PromptTemplate.from_template("""I have a raw dataset of tech companies that needs cleaning and enrichment.
 
         1. Data Cleaning:
-
         Fix inconsistent capitalization in the company_name column (use Title Case, e.g., 'OpenAI').
-
         Standardize the industry column: map terms like 'Artificial Intelligence' or 'ML' to a single category: 'AI'.
 
         2. Enrichment:
-
         Search for and fill in any missing values in the ceo column using current real-world data. 
 
         ## IMPORTANT

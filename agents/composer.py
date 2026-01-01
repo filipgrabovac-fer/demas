@@ -4,18 +4,12 @@ from langchain_core.prompts import PromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 from models import composer_model_name
+from output_formats import DummyData
 from states import MessagesState
 from dotenv import load_dotenv
 load_dotenv()
 
-class DummyData(BaseModel):
-    id: int
-    company_name: str
-    industry: str
-    ceo: str
-    founded_year: int
-    age: int
-    
+
 class ComposerResponse(BaseModel):
     """Response schema for the Composer agent.
     
