@@ -1,4 +1,5 @@
-id,company_name,industry,ceo,founded_year
+
+dummy_data = """id,company_name,industry,ceo,founded_year
 1,openAI,AI,Sam Altman,2015
 2,ANTHROPIC,AI,,2021
 3,google deepmind,,Demis Hassabis,2010
@@ -98,4 +99,4 @@ id,company_name,industry,ceo,founded_year
 97,QUANTINUUM,Artificial Intelligence,,2021
 98,quantum benchmark,AI,,2015
 99,SUPER TECH,ML,,2020
-100,q ai,Artificial Intelligence,,2019
+100,q ai,Artificial Intelligence,,2019"""

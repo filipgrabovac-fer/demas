@@ -13,7 +13,6 @@ search_tool = TavilySearch(
     topic="general",
 )
 
-
 tools = [search_tool]
 
 enhancer_model = ChatGoogleGenerativeAI(
@@ -25,8 +24,6 @@ agent = create_agent(
     enhancer_model,
     tools=tools,
 )
-
-
 
 def enhancer_node(state: MessagesState) -> MessagesState:
 

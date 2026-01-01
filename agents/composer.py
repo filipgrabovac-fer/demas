@@ -1,4 +1,3 @@
-from typing import Any
 from pydantic import BaseModel, Field
 from langchain_core.messages import AIMessage
 from langchain_core.prompts import PromptTemplate
@@ -15,7 +14,8 @@ class DummyData(BaseModel):
     industry: str
     ceo: str
     founded_year: int
-
+    age: int
+    
 class ComposerResponse(BaseModel):
     """Response schema for the Composer agent.
     

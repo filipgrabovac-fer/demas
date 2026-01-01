@@ -9,12 +9,10 @@ from states import MessagesState
 from dotenv import load_dotenv
 load_dotenv()
 
-
 class SupervisorResponse(BaseModel):
     """Response schema for the Supervisor agent."""
     response: str = Field(description="Reasoning for the routing decision")
     cmd: Literal["composer", "enhancer"] = Field(description="Next agent to route to")
-
 
 supervisor_model = ChatGoogleGenerativeAI(
     model=supervisor_model_name,
