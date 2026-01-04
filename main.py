@@ -38,7 +38,7 @@ graph.add_edge("composer", END)
 
 compiled_graph = graph.compile()
 
-for chunk in JsonChunker(dummy_json_data, 10).chunk():
+for chunk in CsvChunker(dummy_csv_data, 10).chunk():
     prompt_template = PromptTemplate.from_template("""I have a raw dataset of tech companies that needs cleaning and enrichment.
 
         1. Data Cleaning:

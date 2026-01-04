@@ -12,7 +12,6 @@ load_dotenv()
 
 class ComposerResponse(BaseModel):
     """Response schema for the Composer agent.
-    
     Return the final formatted dataset as a list of records.
     Each record should be a dictionary representing a row of data.
     """
