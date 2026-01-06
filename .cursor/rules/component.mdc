@@ -1,0 +1,97 @@
+---
+alwaysApply: true
+---
+---
+alwaysApply: true
+---
+
+# Rule: Scalable Component & Page Structure
+
+Description: Enforces a strict, scalable file structure for components and pages, separating UI, logic, types, and API calls.
+Globs: **/*.tsx, **/*.ts
+
+---
+
+# 1. File Structure & Naming Conventions
+
+When generating a new component or page, create a dedicated directory using `kebab-case` (e.g., `my-feature/`). Populate it with the following files based on necessity:
+
+### Core Files
+* **Component File:** `NewComponent.component.tsx`
+    * *Usage:* The main UI implementation.
+* **Page File:** `NewPage.pages.tsx`
+    * *Usage:* If the component is a route/page, use this suffix instead of `.component.tsx`.
+
+### Separation of Concerns (Create these if needed)
+* **Logic File:** `new-component.ts`
+    * *Usage:* Extract complex functions, event handlers, or heavy business logic here to keep the `.tsx` file readable.
+* **Types File:** `new-component.types.ts`
+    * *Usage:* Use if the component requires many interfaces or shared types.
+* **API Hooks File:** `_new-component.api.ts`
+    * *Usage:* For declaring custom hooks (e.g., React Query hooks) used specifically by this component.
+* **Queries File:** `_new-component.queries.ts`
+    * *Usage:* Backend API calls that are environment-agnostic (usable on both server and client).
+
+### Sub-Directories
+* **`api_hooks/`**: Contains specific hook files named `_use{HookName}.ts`.
+* **`components/`**: Recursive structure. If this component has sub-components that are not used elsewhere, create them here following this **exact same structure**.
+
+---
+
+# 2. Implementation Template
+
+Follow this code style for the main `.component.tsx` (or `.pages.tsx`) file.
+* Use `const` exports (no `default export`).
+* Destructure props in the function signature.
+* Use Tailwind CSS for styling.
+
+```tsx
+import { Label } from "@/components/ui/label";
+
+export type FieldWrapperProps = {
+    id: string;
+    label: string;
+    required?: boolean;
+    errors?: Array<{ message?: string } | undefined>;
+    children: React.ReactNode;
+};
+
+export const FieldWrapper = ({
+    children,
+    errors,
+    id,
+    label,
+    required,
+}: FieldWrapperProps) => {
+    return (
+        <div className="flex flex-col gap-2">
+            <Label
+                htmlFor={id}
+                className="text-xs sm:text-sm font-medium text-gray-700 text-left block"
+            >
+                {label} {required && <span className="text-red-500">*</span>}
+            </Label>
+            {children}
+            {errors && (
+                <div className="text-red-500 text-xs text-left">
+                    {errors?.map((error) => error?.message).join(", ")}
+                </div>
+            )}
+        </div>
+    );
+};
+```
+
+
+
+---
+
+# 🚨 IMPORTANT: Implementation Guidelines
+
+* **REUSE Existing Components:** Before implementing *anything* (Buttons, Checkboxes, Sections, Inputs), you **MUST** check the codebase. If a component exists, reuse it. Do not duplicate basic UI elements.
+* **Shadcn UI First:** This project uses **shadcn/ui**. Always verify if the UI segment you need already exists in the Shadcn library. If it does, use it.
+* **Clean Output:** **Do not** add comments explaining your reasoning or "thought process" inside the code. The code must be clean, readable, and self-explanatory.
+* **No Over-engineering:** Keep the code simple. Only create the complex file structure (logic, types, api) if strictly necessary.
+* **Avoid exporting components through index.ts:** This approach is unused and should be avoided completely.
+* **Type definition:** Always use types (if possible) through `components["schema"]["type_name"]` from schema.d.ts file. If the required type does not exist, define it yourself inside .types.ts file.
+---

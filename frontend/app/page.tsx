@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import { DataUploadForm } from "./data-upload-form/data-upload-form.component";
 import { DataPreview } from "./data-preview/data-preview.component";
 import type { ParsedData } from "./data-upload-form/data-upload-form.types";
@@ -20,6 +21,13 @@ export default function DataEnhancementPage() {
 	const handleError = (errorMessage: string) => {
 		setError(errorMessage);
 		setParsedData(null);
+	};
+
+	const handleEnhance = () => {
+		if (!parsedData || parsedData.length === 0) {
+			return;
+		}
+		console.log("Enhance button clicked", { parsedData, columnMetadata });
 	};
 
 	return (
@@ -46,6 +54,18 @@ export default function DataEnhancementPage() {
 				columnMetadata={columnMetadata}
 				onColumnMetadataChange={setColumnMetadata}
 			/>
+
+			{parsedData && parsedData.length > 0 && (
+				<div className="mt-6 flex justify-center sm:mt-8">
+					<Button
+						onClick={handleEnhance}
+						size="lg"
+						className="w-full sm:w-auto"
+					>
+						Enhance
+					</Button>
+				</div>
+			)}
 		</div>
 	);
 }
