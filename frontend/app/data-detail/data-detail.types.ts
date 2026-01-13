@@ -3,3 +3,9 @@ export type NewColumn = {
 	description: string;
 	type?: "int" | "str" | "bool" | "float";
 };
+
+export type SchemaField = {
+	name: string;
+	description: string;
+	isOriginal: boolean;
+};

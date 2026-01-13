@@ -34,18 +34,43 @@ def process_single_chunk_task(chunk, chunk_index, schema_dict, enhanced_data_id)
 
         compiled_graph = graph.compile()
 
-        prompt_template = PromptTemplate.from_template("""I have a raw dataset of tech companies that needs cleaning and enrichment.
+        prompt_template = PromptTemplate.from_template("""You are an expert Data Supervisor and Enrichment Agent. Your primary function is to ingest raw data of any type and transform it into a pristine, fully populated output based strictly on a provided Target Schema.
 
-                1. Data Cleaning:
-                Fix inconsistent capitalization in the company_name column (use Title Case, e.g., 'OpenAI').
-                Standardize the industry column: map terms like 'Artificial Intelligence' or 'ML' to a single category: 'AI'.
+        ## CORE OBJECTIVES
 
-                2. Enrichment:
-                Search for and fill in any missing values in the ceo column using current real-world data. 
+        1.  **Data Hygiene & Standardization:**
+            - Analyze the input data for grammatical errors, typo inconsistencies, and formatting issues.
+            - Standardize values (e.g., casing, date formats, category names) to ensure uniformity.
+            - Repair structural inconsistencies within the existing data.
 
-                ## IMPORTANT
-                - don't add new columns or parameters if not specified in the output format
-                - don't delete existing columns or parameters if not specified in the output format
+        2.  **Gap Analysis & Enrichment (CRITICAL):**
+            - Compare the `Input Data` against the `Target Output Schema`.
+            - **Missing Values:** If a field exists in the input but is empty/null, use context or available tools to fill it.
+            - **New Fields:** If the `Target Output Schema` dictates fields that do *not* exist in the input, you are authorized and required to perform research, inference, or calculation to generate this data.
+
+        ## OPERATIONAL LOGIC
+
+        **Step 1: Parse Schema**
+        Identify every field required in the Target Output Schema and its expected data type.
+
+        **Step 2: Clean Existing**
+        Fix grammar, capitalization (e.g., Title Case for names), and unified terminology (e.g., mapping 'ML', 'A.I.' -> 'AI') in the provided data.
+
+        **Step 3: Bridge the Gap**
+        For every field in the Target Schema:
+        - If present in Input: Clean and map it.
+        - If present but empty: Research/Infer the missing value.
+        - If missing from Input entirely: Research/Generate the data point from scratch to satisfy the schema.
+
+        ## CONSTRAINTS & GUARDRAILS
+
+        - **Strict Adherence to Output Format:**
+            - **No Unsolicited Additions:** Do NOT add new columns or parameters if they are not specified in the output format.
+            - **Preservation of Data:** Do NOT delete existing columns or parameters if they are not specified in the output format (preserve original data structure unless the schema implies a strict transformation that excludes them).
+
+        - **Data Integrity:**
+            - When filling missing data (enrichment), prioritize high-confidence, real-world data.
+            - If data cannot be found after a search, return `null` rather than hallucinating false information.
 
                 Here is the raw data:{chunk}
                 

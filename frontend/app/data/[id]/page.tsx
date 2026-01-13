@@ -5,16 +5,14 @@ import { useParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { DataPreview } from "@/app/data-preview/DataPreview.component";
 import { api } from "@/api/api";
 import { queries } from "@/api/queries";
 import { inferSchema } from "@/app/data-upload-form/data-upload-form";
 import { exportToCSV } from "@/app/data-overview/data-overview";
 import type { ParsedData } from "@/app/data-upload-form/data-upload-form.types";
-import type { NewColumn } from "@/app/data-detail/data-detail.types";
+import type { SchemaField } from "@/app/data-detail/data-detail.types";
+import { SchemaEditor } from "@/app/data-detail/SchemaEditor.component";
 
 export default function DataDetailPage() {
 	const params = useParams();
@@ -25,10 +23,9 @@ export default function DataDetailPage() {
 		api.dataOverview.useGetOriginalDataDetail({ id });
 	const { data: enhancedDataList } = api.dataOverview.useGetEnhancedDataList();
 	const enhanceMutation = api.dataUploadForm.usePostEnhanceData();
+	const deleteMutation = api.dataOverview.useDeleteEnhancedData();
 
-	const [newColumns, setNewColumns] = useState<NewColumn[]>([]);
-	const [newColumnName, setNewColumnName] = useState("");
-	const [newColumnDescription, setNewColumnDescription] = useState("");
+	const [schemaFields, setSchemaFields] = useState<SchemaField[]>([]);
 	const [error, setError] = useState<string | null>(null);
 	const [enhancedDataId, setEnhancedDataId] = useState<number | null>(null);
 
@@ -90,6 +87,20 @@ export default function DataDetailPage() {
 			: null;
 	}, [originalData]);
 
+	useEffect(() => {
+		if (originalDataParsed && originalDataParsed.length > 0) {
+			const inferredSchema = inferSchema(originalDataParsed);
+			const fields: SchemaField[] = Object.entries(inferredSchema).map(
+				([name]) => ({
+					name,
+					description: "",
+					isOriginal: true,
+				}),
+			);
+			setSchemaFields(fields);
+		}
+	}, [originalDataParsed]);
+
 	const enhancedDataParsed = useMemo(() => {
 		if (!enhancedData) return null;
 		return Array.isArray(enhancedData.data)
@@ -97,47 +108,6 @@ export default function DataDetailPage() {
 			: null;
 	}, [enhancedData]);
 
-	const handleAddColumn = () => {
-		if (!newColumnName.trim()) {
-			return;
-		}
-
-		if (
-			newColumns.some(
-				(col) => col.name.toLowerCase() === newColumnName.toLowerCase(),
-			)
-		) {
-			setError("Column with this name already exists");
-			return;
-		}
-
-		if (
-			originalDataParsed &&
-			originalDataParsed.length > 0 &&
-			Object.keys(originalDataParsed[0]).some(
-				(key) => key.toLowerCase() === newColumnName.toLowerCase(),
-			)
-		) {
-			setError("Column with this name already exists in the data");
-			return;
-		}
-
-		setNewColumns([
-			...newColumns,
-			{
-				name: newColumnName.trim(),
-				description: newColumnDescription.trim(),
-				type: "str",
-			},
-		]);
-		setNewColumnName("");
-		setNewColumnDescription("");
-		setError(null);
-	};
-
-	const handleRemoveColumn = (index: number) => {
-		setNewColumns(newColumns.filter((_, i) => i !== index));
-	};
 
 	const handleEnhance = async () => {
 		if (!originalDataParsed || originalDataParsed.length === 0) {
@@ -145,22 +115,33 @@ export default function DataDetailPage() {
 			return;
 		}
 
+		if (schemaFields.length === 0) {
+			setError("At least one schema field is required");
+			return;
+		}
+
+		const invalidFields = schemaFields.filter(
+			(field) => !field.name.trim(),
+		);
+		if (invalidFields.length > 0) {
+			setError("All fields must have a name");
+			return;
+		}
+
 		setError(null);
 
 		try {
-			const baseSchema = inferSchema(originalDataParsed);
-
-			const newColumnsSchema: Record<string, "int" | "str" | "bool" | "float"> =
+			const schemaDict: Record<string, "int" | "str" | "bool" | "float"> =
 				{};
-			for (const col of newColumns) {
-				newColumnsSchema[col.name] = col.type || "str";
+			for (const field of schemaFields) {
+				if (field.name.trim()) {
+					schemaDict[field.name.trim()] = "str";
+				}
 			}
-
-			const mergedSchema = { ...baseSchema, ...newColumnsSchema };
 
 			const result = await enhanceMutation.mutateAsync({
 				original_data_id: id,
-				schema: mergedSchema,
+				schema: schemaDict,
 			});
 
 			if (result?.id) {
@@ -195,6 +176,38 @@ export default function DataDetailPage() {
 	const handleExportEnhanced = () => {
 		if (!enhancedDataParsed) return;
 		exportToCSV(enhancedDataParsed, `enhanced-data-${id}.csv`);
+	};
+
+	const handleDeleteEnhancedData = async () => {
+		if (!enhancedData) return;
+
+		setError(null);
+
+		try {
+			await deleteMutation.mutateAsync({ id: enhancedData.id });
+
+			setEnhancedDataId(null);
+
+			await queryClient.invalidateQueries({
+				queryKey: queries.dataOverview.getEnhancedDataList().queryKey,
+			});
+
+			if (enhancedData.id) {
+				await queryClient.invalidateQueries({
+					queryKey: queries.dataOverview.getEnhancedDataDetail({
+						id: enhancedData.id,
+					}).queryKey,
+				});
+			}
+		} catch (err) {
+			const errorMessage =
+				err instanceof Error
+					? err.message
+					: typeof err === "object" && err !== null && "error" in err
+						? String(err.error)
+						: "Failed to delete enhanced data. Please try again.";
+			setError(errorMessage);
+		}
 	};
 
 	if (isLoadingOriginal) {
@@ -244,9 +257,18 @@ export default function DataDetailPage() {
 				<div className="space-y-6">
 					<div className="flex items-center justify-between">
 						<h2 className="text-xl font-semibold">Enhanced Data</h2>
-						<Button onClick={handleExportEnhanced} variant="outline">
-							Export Enhanced Data (CSV)
-						</Button>
+						<div className="flex gap-2">
+							<Button onClick={handleExportEnhanced} variant="outline">
+								Export Enhanced Data (CSV)
+							</Button>
+							<Button
+								onClick={handleDeleteEnhancedData}
+								variant="destructive"
+								disabled={deleteMutation.isPending}
+							>
+								{deleteMutation.isPending ? "Deleting..." : "Delete Enhanced Data"}
+							</Button>
+						</div>
 					</div>
 					<div className="rounded-md border border-green-500 bg-green-50 p-4 text-sm text-green-800 dark:bg-green-950 dark:text-green-200">
 						This data has been enhanced. You can view it below or export it.
@@ -291,79 +313,31 @@ export default function DataDetailPage() {
 					<div className="rounded-md border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
 						Enhancement failed. Please try again.
 					</div>
+					<div className="flex justify-center gap-2 mb-6">
+						<Button
+							onClick={handleDeleteEnhancedData}
+							variant="destructive"
+							disabled={deleteMutation.isPending}
+						>
+							{deleteMutation.isPending ? "Deleting..." : "Delete Enhanced Data"}
+						</Button>
+					</div>
 					<div className="rounded-md border border-border p-6">
-						<h3 className="mb-4 text-lg font-semibold">
-							Add New Columns (Optional)
-						</h3>
+						<h3 className="mb-4 text-lg font-semibold">Edit Schema</h3>
 						<p className="mb-4 text-sm text-muted-foreground">
-							Before enhancing, you can add new columns that you want the AI to
-							generate. These columns will be included in the enhancement
-							schema.
+							Configure the schema for data enhancement. You can edit field
+							names, change types, remove fields, or add new ones.
 						</p>
 
-						<div className="mb-4 space-y-4">
-							<div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
-								<div className="flex-1">
-									<Label htmlFor="column-name">Column Name</Label>
-									<Input
-										id="column-name"
-										value={newColumnName}
-										onChange={(e) => setNewColumnName(e.target.value)}
-										placeholder="e.g., age, net_worth"
-										onKeyDown={(e) => {
-											if (e.key === "Enter") {
-												handleAddColumn();
-											}
-										}}
-									/>
-								</div>
-								<div className="flex-1">
-									<Label htmlFor="column-description">Description</Label>
-									<Textarea
-										id="column-description"
-										value={newColumnDescription}
-										onChange={(e) => setNewColumnDescription(e.target.value)}
-										placeholder="Describe what this column should contain"
-										className="min-h-[40px]"
-									/>
-								</div>
-								<div className="flex items-end">
-									<Button onClick={handleAddColumn} type="button">
-										Add Column
-									</Button>
-								</div>
-							</div>
-						</div>
-
-						{newColumns.length > 0 && (
-							<div className="mb-4 rounded-md border border-border bg-muted/30 p-4">
-								<h4 className="mb-2 text-sm font-medium">Added Columns:</h4>
-								<div className="space-y-2">
-									{newColumns.map((col, idx) => (
-										<div
-											key={col.name}
-											className="flex items-start justify-between rounded border border-border bg-background p-2"
-										>
-											<div className="flex-1">
-												<div className="font-medium">{col.name}</div>
-												{col.description && (
-													<div className="text-xs text-muted-foreground">
-														{col.description}
-													</div>
-												)}
-											</div>
-											<Button
-												variant="ghost"
-												size="sm"
-												onClick={() => handleRemoveColumn(idx)}
-											>
-												Remove
-											</Button>
-										</div>
-									))}
-								</div>
-							</div>
-						)}
+						<SchemaEditor
+							fields={schemaFields}
+							onFieldsChange={setSchemaFields}
+							originalFieldNames={
+								originalDataParsed && originalDataParsed.length > 0
+									? Object.keys(originalDataParsed[0])
+									: []
+							}
+						/>
 
 						<div className="mt-6 flex justify-center">
 							<Button
@@ -389,78 +363,21 @@ export default function DataDetailPage() {
 					<DataPreview data={originalDataParsed} columnMetadata={{}} />
 
 					<div className="rounded-md border border-border p-6">
-						<h3 className="mb-4 text-lg font-semibold">
-							Add New Columns (Optional)
-						</h3>
+						<h3 className="mb-4 text-lg font-semibold">Edit Schema</h3>
 						<p className="mb-4 text-sm text-muted-foreground">
-							Before enhancing, you can add new columns that you want the AI to
-							generate. These columns will be included in the enhancement
-							schema.
+							Configure the schema for data enhancement. You can edit field
+							names, change types, remove fields, or add new ones.
 						</p>
 
-						<div className="mb-4 space-y-4">
-							<div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
-								<div className="flex-1">
-									<Label htmlFor="column-name">Column Name</Label>
-									<Input
-										id="column-name"
-										value={newColumnName}
-										onChange={(e) => setNewColumnName(e.target.value)}
-										placeholder="e.g., age, net_worth"
-										onKeyDown={(e) => {
-											if (e.key === "Enter") {
-												handleAddColumn();
-											}
-										}}
-									/>
-								</div>
-								<div className="flex-1">
-									<Label htmlFor="column-description">Description</Label>
-									<Textarea
-										id="column-description"
-										value={newColumnDescription}
-										onChange={(e) => setNewColumnDescription(e.target.value)}
-										placeholder="Describe what this column should contain"
-										className="min-h-[40px]"
-									/>
-								</div>
-								<div className="flex items-end">
-									<Button onClick={handleAddColumn} type="button">
-										Add Column
-									</Button>
-								</div>
-							</div>
-						</div>
-
-						{newColumns.length > 0 && (
-							<div className="mb-4 rounded-md border border-border bg-muted/30 p-4">
-								<h4 className="mb-2 text-sm font-medium">Added Columns:</h4>
-								<div className="space-y-2">
-									{newColumns.map((col, idx) => (
-										<div
-											key={col.name}
-											className="flex items-start justify-between rounded border border-border bg-background p-2"
-										>
-											<div className="flex-1">
-												<div className="font-medium">{col.name}</div>
-												{col.description && (
-													<div className="text-xs text-muted-foreground">
-														{col.description}
-													</div>
-												)}
-											</div>
-											<Button
-												variant="ghost"
-												size="sm"
-												onClick={() => handleRemoveColumn(idx)}
-											>
-												Remove
-											</Button>
-										</div>
-									))}
-								</div>
-							</div>
-						)}
+						<SchemaEditor
+							fields={schemaFields}
+							onFieldsChange={setSchemaFields}
+							originalFieldNames={
+								originalDataParsed && originalDataParsed.length > 0
+									? Object.keys(originalDataParsed[0])
+									: []
+							}
+						/>
 
 						<div className="mt-6 flex justify-center">
 							<Button
