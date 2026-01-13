@@ -1,16 +1,23 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { DataUploadForm } from "./data-upload-form/data-upload-form.component";
-import { DataPreview } from "./data-preview/data-preview.component";
+import { DataUploadForm } from "./data-upload-form/DataUploadForm.component";
+import { DataPreview } from "./data-preview/DataPreview.component";
 import type { ParsedData } from "./data-upload-form/data-upload-form.types";
 import type { ColumnMetadataMap } from "./data-preview/data-preview.types";
+import Link from "next/link";
+import { api } from "@/api/api";
+import { convertToBackendFormat } from "./data-upload-form/data-upload-form";
 
 export default function DataEnhancementPage() {
+	const router = useRouter();
 	const [parsedData, setParsedData] = useState<ParsedData | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [columnMetadata, setColumnMetadata] = useState<ColumnMetadataMap>({});
+
+	const saveMutation = api.dataUploadForm.usePostOriginalData();
 
 	const handleDataParsed = (data: ParsedData) => {
 		setParsedData(data);
@@ -23,20 +30,46 @@ export default function DataEnhancementPage() {
 		setParsedData(null);
 	};
 
-	const handleEnhance = () => {
+	const handleSave = async () => {
 		if (!parsedData || parsedData.length === 0) {
 			return;
 		}
-		console.log("Enhance button clicked", { parsedData, columnMetadata });
+
+		setError(null);
+
+		try {
+			const backendData = convertToBackendFormat(parsedData);
+
+			const result = await saveMutation.mutateAsync({
+				data: backendData,
+			});
+
+			if (result?.id) {
+				router.push(`/data/${result.id}`);
+			}
+		} catch (err) {
+			const errorMessage =
+				err instanceof Error
+					? err.message
+					: typeof err === "object" && err !== null && "error" in err
+						? String(err.error)
+						: "Failed to save data. Please try again.";
+			setError(errorMessage);
+		}
 	};
 
 	return (
 		<div className="container mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-			<div className="mb-6 sm:mb-8">
-				<h1 className="text-2xl font-bold sm:text-3xl">Data Enhancement</h1>
-				<p className="mt-2 text-sm text-muted-foreground sm:text-base">
-					Upload a CSV or JSON file to preview and enhance your data
-				</p>
+			<div className="mb-6 flex items-center justify-between sm:mb-8">
+				<div>
+					<h1 className="text-2xl font-bold sm:text-3xl">Data Enhancement</h1>
+					<p className="mt-2 text-sm text-muted-foreground sm:text-base">
+						Upload a CSV or JSON file to preview and enhance your data
+					</p>
+				</div>
+				<Link href="/data">
+					<Button variant="outline">View All Data</Button>
+				</Link>
 			</div>
 
 			<div className="mb-6 sm:mb-8">
@@ -58,11 +91,12 @@ export default function DataEnhancementPage() {
 			{parsedData && parsedData.length > 0 && (
 				<div className="mt-6 flex justify-center sm:mt-8">
 					<Button
-						onClick={handleEnhance}
+						onClick={handleSave}
 						size="lg"
 						className="w-full sm:w-auto"
+						disabled={saveMutation.isPending}
 					>
-						Enhance
+						{saveMutation.isPending ? "Saving..." : "Save"}
 					</Button>
 				</div>
 			)}

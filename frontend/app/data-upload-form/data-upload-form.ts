@@ -212,3 +212,78 @@ export async function parseJSON(file: File): Promise<ParsedData> {
 		"JSON file must contain an object, array, or primitive value",
 	);
 }
+
+export function convertToBackendFormat(
+	parsedData: ParsedData,
+): Array<Record<string, string>> {
+	return parsedData.map((row) => {
+		const convertedRow: Record<string, string> = {};
+		for (const [key, value] of Object.entries(row)) {
+			if (value === null || value === undefined) {
+				convertedRow[key] = "";
+			} else if (typeof value === "boolean") {
+				convertedRow[key] = value ? "true" : "false";
+			} else {
+				convertedRow[key] = String(value);
+			}
+		}
+		return convertedRow;
+	});
+}
+
+export function inferSchema(
+	parsedData: ParsedData,
+): Record<string, "int" | "str" | "bool" | "float"> {
+	if (!parsedData || parsedData.length === 0) {
+		return {};
+	}
+
+	const schema: Record<string, "int" | "str" | "bool" | "float"> = {};
+	const columnTypes: Record<string, Set<string>> = {};
+
+	for (const row of parsedData) {
+		for (const [key, value] of Object.entries(row)) {
+			if (!columnTypes[key]) {
+				columnTypes[key] = new Set();
+			}
+
+			if (value === null || value === undefined) {
+				continue;
+			}
+
+			if (typeof value === "boolean") {
+				columnTypes[key].add("bool");
+			} else if (typeof value === "number") {
+				if (Number.isInteger(value)) {
+					columnTypes[key].add("int");
+				} else {
+					columnTypes[key].add("float");
+				}
+			} else if (typeof value === "string") {
+				columnTypes[key].add("str");
+			}
+		}
+	}
+
+	for (const [key, types] of Object.entries(columnTypes)) {
+		if (types.has("int") && !types.has("float")) {
+			schema[key] = "int";
+		} else if (types.has("float")) {
+			schema[key] = "float";
+		} else if (types.has("bool")) {
+			schema[key] = "bool";
+		} else {
+			schema[key] = "str";
+		}
+	}
+
+	for (const row of parsedData) {
+		for (const key of Object.keys(row)) {
+			if (!schema[key]) {
+				schema[key] = "str";
+			}
+		}
+	}
+
+	return schema;
+}

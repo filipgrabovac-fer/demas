@@ -9,13 +9,15 @@ class OriginalDataSerializer(serializers.ModelSerializer):
 
 
 class EnhancedDataSerializer(serializers.ModelSerializer):
+    status = serializers.CharField(default="pending", required=False)
+    
     class Meta:
         model = EnhancedData
         fields = '__all__'
 
 class EnhancedDataEnhanceRequestSerializer(serializers.Serializer):
-    original_data = serializers.ListField(
-        child=serializers.DictField(child=serializers.CharField())
+    original_data_id = serializers.IntegerField(
+        help_text="ID of the OriginalData instance to enhance"
     )
     schema = serializers.DictField(
         child=serializers.ChoiceField(

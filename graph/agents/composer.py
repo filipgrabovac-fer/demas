@@ -9,7 +9,6 @@ from graph.states import MessagesState
 from dotenv import load_dotenv
 load_dotenv()
 
-
 class ComposerResponse(BaseModel):
     """Response schema for the Composer agent.
     Return the final formatted dataset as a list of records.
