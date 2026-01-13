@@ -23,19 +23,9 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+    env_file:
+      - .env
     environment:
-      - DJANGO_SETTINGS_MODULE=settings
-      - DATABASE_URL=postgresql://neondb_owner:npg_0lAFoia4POmY@ep-square-hat-ahe424m1-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
-
-      - GOOGLE_API_KEY=AIzaSyBDd_LGzEMQ7StLrHlo8oFMLAEDoQ5pqqI
-
-      - LANGSMITH_TRACING=true
-      - LANGSMITH_ENDPOINT=https://api.smith.langchain.com
-      - LANGSMITH_API_KEY=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
-      - LANGSMITH_PROJECT=pr-glossy-pickup-18
-
-      - TAVILY_API_KEY=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
-
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
     command: uv run manage.py runserver 0.0.0.0:8000
@@ -50,19 +40,10 @@ services:
         condition: service_healthy
       django-backend:
         condition: service_started
+    env_file:
+      - .env
     environment:
       - DJANGO_SETTINGS_MODULE=settings
-      - DATABASE_URL=postgresql://neondb_owner:npg_0lAFoia4POmY@ep-square-hat-ahe424m1-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
-
-      - GOOGLE_API_KEY=AIzaSyBDd_LGzEMQ7StLrHlo8oFMLAEDoQ5pqqI
-
-      - LANGSMITH_TRACING=true
-      - LANGSMITH_ENDPOINT=https://api.smith.langchain.com
-      - LANGSMITH_API_KEY=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
-      - LANGSMITH_PROJECT=pr-glossy-pickup-18
-
-      - TAVILY_API_KEY=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
-
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
     command: uv run celery -A main.celery worker --loglevel=info --concurrency=5
