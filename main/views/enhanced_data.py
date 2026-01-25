@@ -48,13 +48,22 @@ class EnhancedDataView(viewsets.ModelViewSet):
                 value={
                     "original_data_id": 1,
                     "schema": {
-                        "id": "int",
-                        "company_name": "str",
-                        "industry": "str",
-                        "ceo": "str",
-                        "founded_year": "int",
-                        "age": "int",
-                        "ceo_net_worth": "int"
+                        "id":{
+                            "type": "int",
+                            "description": "The id of the company"
+                        },
+                        "company_name": {
+                            "type": "str",
+                            "description": "The name of the company"
+                        },
+                        "industry": {
+                            "type": "str",
+                            "description": "The industry of the company"
+                        },
+                        "ceo": {
+                            "type": "str",
+                            "description": "The CEO of the company"
+                        },
                     }
                 },
                 request_only=True

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
@@ -13,6 +13,7 @@ import { exportToCSV } from "@/app/data-overview/data-overview";
 import type { ParsedData } from "@/app/data-upload-form/data-upload-form.types";
 import type { SchemaField } from "@/app/data-detail/data-detail.types";
 import { SchemaEditor } from "@/app/data-detail/SchemaEditor.component";
+import type { components } from "@/api/schema";
 
 export default function DataDetailPage() {
 	const params = useParams();
@@ -25,9 +26,10 @@ export default function DataDetailPage() {
 	const enhanceMutation = api.dataUploadForm.usePostEnhanceData();
 	const deleteMutation = api.dataOverview.useDeleteEnhancedData();
 
-	const [schemaFields, setSchemaFields] = useState<SchemaField[]>([]);
 	const [error, setError] = useState<string | null>(null);
 	const [enhancedDataId, setEnhancedDataId] = useState<number | null>(null);
+	const [schemaFields, setSchemaFields] = useState<SchemaField[]>([]);
+	const schemaInitializedRef = useRef(false);
 
 	const enhancedDataFromList = useMemo(() => {
 		if (!enhancedDataList) return null;
@@ -87,19 +89,30 @@ export default function DataDetailPage() {
 			: null;
 	}, [originalData]);
 
+	const storedSchema = useMemo(() => {
+		return (
+			originalData as {
+				schema?: Record<string, "int" | "str" | "bool" | "float">;
+			}
+		)?.schema;
+	}, [originalData]);
+
 	useEffect(() => {
 		if (originalDataParsed && originalDataParsed.length > 0) {
-			const inferredSchema = inferSchema(originalDataParsed);
-			const fields: SchemaField[] = Object.entries(inferredSchema).map(
-				([name]) => ({
+			const schemaToUse = storedSchema || inferSchema(originalDataParsed);
+			const fields: SchemaField[] = Object.entries(schemaToUse).map(
+				([name, type]) => ({
 					name,
+					type,
 					description: "",
 					isOriginal: true,
 				}),
 			);
+			// Sync external data (originalData schema) to component state
+			// eslint-disable-next-line
 			setSchemaFields(fields);
 		}
-	}, [originalDataParsed]);
+	}, [originalDataParsed, storedSchema]);
 
 	const enhancedDataParsed = useMemo(() => {
 		if (!enhancedData) return null;
@@ -107,7 +120,6 @@ export default function DataDetailPage() {
 			? (enhancedData.data as unknown as ParsedData)
 			: null;
 	}, [enhancedData]);
-
 
 	const handleEnhance = async () => {
 		if (!originalDataParsed || originalDataParsed.length === 0) {
@@ -120,9 +132,7 @@ export default function DataDetailPage() {
 			return;
 		}
 
-		const invalidFields = schemaFields.filter(
-			(field) => !field.name.trim(),
-		);
+		const invalidFields = schemaFields.filter((field) => !field.name.trim());
 		if (invalidFields.length > 0) {
 			setError("All fields must have a name");
 			return;
@@ -131,18 +141,23 @@ export default function DataDetailPage() {
 		setError(null);
 
 		try {
-			const schemaDict: Record<string, "int" | "str" | "bool" | "float"> =
-				{};
+			const schemaDict: Record<
+				string,
+				{ type: "int" | "str" | "bool" | "float"; description: string }
+			> = {};
 			for (const field of schemaFields) {
 				if (field.name.trim()) {
-					schemaDict[field.name.trim()] = "str";
+					schemaDict[field.name.trim()] = {
+						type: field.type,
+						description: field.description || "",
+					};
 				}
 			}
 
-			const result = await enhanceMutation.mutateAsync({
+			const result = (await enhanceMutation.mutateAsync({
 				original_data_id: id,
 				schema: schemaDict,
-			});
+			})) as components["schemas"]["EnhancedData"] | undefined;
 
 			if (result?.id) {
 				setEnhancedDataId(result.id);
@@ -266,7 +281,9 @@ export default function DataDetailPage() {
 								variant="destructive"
 								disabled={deleteMutation.isPending}
 							>
-								{deleteMutation.isPending ? "Deleting..." : "Delete Enhanced Data"}
+								{deleteMutation.isPending
+									? "Deleting..."
+									: "Delete Enhanced Data"}
 							</Button>
 						</div>
 					</div>
@@ -319,7 +336,9 @@ export default function DataDetailPage() {
 							variant="destructive"
 							disabled={deleteMutation.isPending}
 						>
-							{deleteMutation.isPending ? "Deleting..." : "Delete Enhanced Data"}
+							{deleteMutation.isPending
+								? "Deleting..."
+								: "Delete Enhanced Data"}
 						</Button>
 					</div>
 					<div className="rounded-md border border-border p-6">

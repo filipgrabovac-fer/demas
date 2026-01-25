@@ -4,19 +4,10 @@ from langchain_core.prompts import PromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 from graph.models import composer_model_name
-from graph.output_formats import build_dynamic_model, DummyData
+from graph.output_formats import build_dynamic_model
 from graph.states import MessagesState
 from dotenv import load_dotenv
 load_dotenv()
-
-class ComposerResponse(BaseModel):
-    """Response schema for the Composer agent.
-    Return the final formatted dataset as a list of records.
-    Each record should be a dictionary representing a row of data.
-    """
-    composed_data: list[DummyData] = Field(
-        description="The final formatted dataset as a list of record dictionaries"
-    )
 
 
 def composer_node(state: MessagesState) -> MessagesState:

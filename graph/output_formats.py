@@ -1,5 +1,5 @@
 from typing import Optional
-from pydantic import BaseModel, create_model
+from pydantic import BaseModel, Field, create_model
 
 _model_cache: dict[str, type[BaseModel]] = {}
 
@@ -25,34 +25,54 @@ def _parse_type(type_spec: str | type) -> type:
 
 
 def build_dynamic_model(
-    schema: dict[str, str | type],
+    schema: dict[str, dict[str, str]],
     model_name: str = "DynamicDataModel",
 ) -> type[BaseModel]:
     """Build a Pydantic model dynamically from a schema.
     
     Args:
-        schema: Dictionary mapping field names to type specs ("str", "int", "str | null", etc.)
+        schema: Dictionary mapping field names to field specs.
+                Each field spec must have "type" key, and optionally "description".
+                Type specs: "str", "int", "float", "bool", "str | null", etc.
         model_name: Name for the generated model class.
     
     Example:
-        >>> schema = {"id": "int", "name": "str", "age": "int | null"}
+        >>> schema = {
+        ...     "id": {"type": "int", "description": "User ID"},
+        ...     "name": {"type": "str", "description": "User name"},
+        ...     "age": {"type": "int | null", "description": "User age"}
+        ... }
         >>> Model = build_dynamic_model(schema, "UserModel")
     """
-    cache_key = f"{model_name}:{str(sorted(schema.items()))}"
+    schema_items = tuple(sorted(
+        (name, spec.get("type", "str"), spec.get("description", ""))
+        for name, spec in schema.items()
+    ))
+    cache_key = f"{model_name}:{str(schema_items)}"
+    
     if cache_key in _model_cache:
         return _model_cache[cache_key]
     
-    fields = {name: (_parse_type(spec), ...) for name, spec in schema.items()}
+    fields = {}
+    for name, field_spec in schema.items():
+        field_type = _parse_type(field_spec.get("type", "str"))
+        description = field_spec.get("description", "")
+        
+        if description:
+            fields[name] = (field_type, Field(..., description=description))
+        else:
+            fields[name] = (field_type, ...)
+    
     model = create_model(model_name, **fields)
     _model_cache[cache_key] = model
     return model
 
 DummyData = build_dynamic_model({
-    "id": "int",
-    "company_name": "str",
-    "industry": "str",
-    "ceo": "str",
-    "founded_year": "int",
-    "age": "int",
-    "ceo_net_worth": "int",
+    "id": {"type": "int", "description": "The id of the company"},
+    "company_name": {"type": "str", "description": "The name of the company"},
+    "industry": {"type": "str", "description": "The industry of the company"},
+    "ceo": {"type": "str", "description": "The CEO of the company"},
+    "founded_year": {"type": "int", "description": "The year the company was founded"},
+    "age": {"type": "int", "description": "The age of the company"},
+    "ceo_net_worth": {"type": "int", "description": "The net worth of the CEO"},
 })

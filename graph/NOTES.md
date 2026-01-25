@@ -6,3 +6,8 @@
 
 4.1.2026.
 - add simple database and save enhanced data
+
+
+16.1.2026.
+- dodati description polja u kontekst samog grafa
+- dodati tipove po polju

@@ -7,5 +7,6 @@ export type NewColumn = {
 export type SchemaField = {
 	name: string;
 	description: string;
+	type: "int" | "str" | "bool" | "float";
 	isOriginal: boolean;
 };

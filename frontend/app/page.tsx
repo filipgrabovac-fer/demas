@@ -9,7 +9,10 @@ import type { ParsedData } from "./data-upload-form/data-upload-form.types";
 import type { ColumnMetadataMap } from "./data-preview/data-preview.types";
 import Link from "next/link";
 import { api } from "@/api/api";
-import { convertToBackendFormat } from "./data-upload-form/data-upload-form";
+import {
+	convertToBackendFormat,
+	inferSchema,
+} from "./data-upload-form/data-upload-form";
 
 export default function DataEnhancementPage() {
 	const router = useRouter();
@@ -39,9 +42,11 @@ export default function DataEnhancementPage() {
 
 		try {
 			const backendData = convertToBackendFormat(parsedData);
+			const schema = inferSchema(parsedData);
 
 			const result = await saveMutation.mutateAsync({
 				data: backendData,
+				schema: schema,
 			});
 
 			if (result?.id) {

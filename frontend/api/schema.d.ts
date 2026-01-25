@@ -45,6 +45,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description Enhance the original data */
         post: operations["enhanced_data_enhance_create"];
         delete?: never;
         options?: never;
@@ -90,24 +91,30 @@ export interface components {
     schemas: {
         EnhancedData: {
             readonly id: number;
+            /** @default pending */
+            status: string;
             /** @description Array of objects representing the enhanced data */
             data?: unknown;
-            /**
-             * @description Status of the enhancement process
-             *
-             *     * `pending` - Pending
-             *     * `complete` - Complete
-             *     * `failed` - Failed
-             */
-            status?: components["schemas"]["StatusEnum"];
             /** Format: date-time */
             readonly created_at: string;
             /** Format: date-time */
             readonly updated_at: string;
             original_data: number;
         };
+        EnhancedDataEnhanceRequest: {
+            /** @description ID of the OriginalData instance to enhance */
+            original_data_id: number;
+            /** @description Schema definition mapping field names to field specs with type and description (e.g., {'id': {'type': 'int', 'description': 'User ID'}}) */
+            schema: {
+                [key: string]: components["schemas"]["SchemaField"];
+            };
+        };
         OriginalData: {
             readonly id: number;
+            /** @description Schema definition mapping field names to types (e.g., {'id': 'int', 'name': 'str'}) */
+            schema?: {
+                [key: string]: "int" | "str" | "bool" | "float";
+            } | null;
             data?: unknown;
             /** Format: date-time */
             readonly created_at: string;
@@ -116,16 +123,10 @@ export interface components {
         };
         PatchedEnhancedData: {
             readonly id?: number;
+            /** @default pending */
+            status: string;
             /** @description Array of objects representing the enhanced data */
             data?: unknown;
-            /**
-             * @description Status of the enhancement process
-             *
-             *     * `pending` - Pending
-             *     * `complete` - Complete
-             *     * `failed` - Failed
-             */
-            status?: components["schemas"]["StatusEnum"];
             /** Format: date-time */
             readonly created_at?: string;
             /** Format: date-time */
@@ -134,19 +135,37 @@ export interface components {
         };
         PatchedOriginalData: {
             readonly id?: number;
+            /** @description Schema definition mapping field names to types (e.g., {'id': 'int', 'name': 'str'}) */
+            schema?: {
+                [key: string]: "int" | "str" | "bool" | "float";
+            } | null;
             data?: unknown;
             /** Format: date-time */
             readonly created_at?: string;
             /** Format: date-time */
             readonly updated_at?: string;
         };
+        SchemaField: {
+            /**
+             * @description Type must be one of: 'int', 'str', 'bool', 'float'
+             *
+             *     * `int` - int
+             *     * `str` - str
+             *     * `bool` - bool
+             *     * `float` - float
+             */
+            type: components["schemas"]["TypeEnum"];
+            /** @description Description of what this field should contain */
+            description?: string;
+        };
         /**
-         * @description * `pending` - Pending
-         *     * `complete` - Complete
-         *     * `failed` - Failed
+         * @description * `int` - int
+         *     * `str` - str
+         *     * `bool` - bool
+         *     * `float` - float
          * @enum {string}
          */
-        StatusEnum: "pending" | "complete" | "failed";
+        TypeEnum: "int" | "str" | "bool" | "float";
     };
     responses: never;
     parameters: never;
@@ -308,19 +327,18 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["EnhancedData"];
-                "application/x-www-form-urlencoded": components["schemas"]["EnhancedData"];
-                "multipart/form-data": components["schemas"]["EnhancedData"];
+                "application/json": components["schemas"]["EnhancedDataEnhanceRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["EnhancedDataEnhanceRequest"];
+                "multipart/form-data": components["schemas"]["EnhancedDataEnhanceRequest"];
             };
         };
         responses: {
-            200: {
+            /** @description No response body */
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["EnhancedData"];
-                };
+                content?: never;
             };
         };
     };

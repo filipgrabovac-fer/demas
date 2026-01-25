@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,27 +25,16 @@ const toSnakeCase = (input: string): string => {
 export const SchemaEditor = ({ fields, onFieldsChange }: SchemaEditorProps) => {
 	const [userInputs, setUserInputs] = useState<Record<number, string>>({});
 	const [touchedFields, setTouchedFields] = useState<Set<number>>(new Set());
-	const initializedIndicesRef = useRef<Set<number>>(new Set());
 
-	useEffect(() => {
-		const inputs: Record<number, string> = {};
+	const mergedUserInputs = useMemo(() => {
+		const merged: Record<number, string> = { ...userInputs };
 		fields.forEach((field, index) => {
-			if (!initializedIndicesRef.current.has(index)) {
-				inputs[index] = field.name || "";
-				initializedIndicesRef.current.add(index);
+			if (!(index in merged)) {
+				merged[index] = field.name || "";
 			}
 		});
-		if (Object.keys(inputs).length > 0) {
-			setUserInputs((prev) => {
-				const updated = { ...prev };
-				Object.entries(inputs).forEach(([idx, value]) => {
-					updated[Number(idx)] = value;
-				});
-				return updated;
-			});
-		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [fields]);
+		return merged;
+	}, [userInputs, fields]);
 
 	const handleFieldNameChange = (index: number, userInput: string) => {
 		setUserInputs((prev) => ({ ...prev, [index]: userInput }));
@@ -73,7 +62,6 @@ export const SchemaEditor = ({ fields, onFieldsChange }: SchemaEditorProps) => {
 
 	const handleRemoveField = (index: number) => {
 		const updatedFields = fields.filter((_, i) => i !== index);
-		initializedIndicesRef.current.delete(index);
 		setUserInputs((prev) => {
 			const updated = { ...prev };
 			delete updated[index];
@@ -108,6 +96,7 @@ export const SchemaEditor = ({ fields, onFieldsChange }: SchemaEditorProps) => {
 		const newField: SchemaField = {
 			name: "",
 			description: "",
+			type: "str",
 			isOriginal: false,
 		};
 		const updatedFields = [newField, ...fields];
@@ -125,10 +114,6 @@ export const SchemaEditor = ({ fields, onFieldsChange }: SchemaEditorProps) => {
 			});
 			return reindexed;
 		});
-		initializedIndicesRef.current = new Set(
-			Array.from(initializedIndicesRef.current).map((idx) => idx + 1),
-		);
-		initializedIndicesRef.current.add(0);
 		onFieldsChange(updatedFields);
 	};
 
@@ -157,11 +142,31 @@ export const SchemaEditor = ({ fields, onFieldsChange }: SchemaEditorProps) => {
 		return null;
 	};
 
+	const canAddNewField = useMemo(() => {
+		if (fields.length === 0) return true;
+
+		return fields.every((field, index) => {
+			const trimmedName = field.name?.trim();
+			if (!trimmedName) return false;
+
+			const duplicateIndex = fields.findIndex(
+				(f, i) =>
+					i !== index && f.name.toLowerCase() === trimmedName.toLowerCase(),
+			);
+			return duplicateIndex === -1;
+		});
+	}, [fields]);
+
 	return (
 		<div className="space-y-4">
 			<div className="flex items-center justify-between">
 				<Label className="text-base font-semibold">Schema Fields</Label>
-				<Button onClick={handleAddField} type="button" size="sm">
+				<Button
+					onClick={handleAddField}
+					type="button"
+					size="sm"
+					disabled={!canAddNewField}
+				>
 					Add Field
 				</Button>
 			</div>
@@ -173,14 +178,14 @@ export const SchemaEditor = ({ fields, onFieldsChange }: SchemaEditorProps) => {
 			) : (
 				<div className="space-y-4">
 					{fields.map((field, index) => {
-						const userInput = userInputs[index] ?? (field.name || "");
+						const userInput = mergedUserInputs[index] ?? (field.name || "");
 						const isTouched = touchedFields.has(index);
 						const nameError = validateFieldName(field.name, index, isTouched);
 						const displayName = toSnakeCase(userInput);
 
 						return (
 							<div
-								key={`field-${index}-${field.isOriginal ? "orig" : "new"}-${field.name || "empty"}`}
+								key={`field-${index}-${field.isOriginal ? "orig" : "new"}`}
 								className="flex flex-col gap-4 rounded-md border border-border bg-background p-4"
 							>
 								<div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-4">

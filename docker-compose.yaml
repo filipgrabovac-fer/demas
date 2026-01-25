@@ -29,6 +29,8 @@ services:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
     command: uv run manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app/
 
   celery-worker:
     container_name: celery-worker
@@ -50,3 +52,4 @@ services:
     restart: unless-stopped
 volumes:
   redis_data:
+  app_data:

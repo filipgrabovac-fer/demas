@@ -2,7 +2,7 @@ from celery import shared_task, group, chord
 from langchain_core.messages import HumanMessage
 from langchain_core.prompts import PromptTemplate
 from langgraph.graph import START, END, StateGraph
-from graph.agents.composer import ComposerResponse, composer_node
+from graph.agents.composer import composer_node
 from graph.agents.enhancer import enhancer_node
 from graph.agents.reviewer import reviewer_node
 from graph.agents.supervisor import supervisor_node
@@ -12,7 +12,7 @@ from graph.utils import CsvChunker
 
 
 @shared_task
-def process_single_chunk_task(chunk, chunk_index, schema_dict, enhanced_data_id):
+def process_single_chunk_task(chunk, chunk_index, schema_dict):
     """Process a single chunk of data and return enhanced results."""
     try:
         # Compile graph inside task for thread safety
@@ -76,7 +76,7 @@ def process_single_chunk_task(chunk, chunk_index, schema_dict, enhanced_data_id)
                 
                 Output format:
                 {output_format}
-                """).format(chunk=chunk, output_format=ComposerResponse.model_json_schema())
+                """).format(chunk=chunk, output_format=schema_dict)
         
         result = compiled_graph.invoke({
             "messages": [
@@ -130,7 +130,7 @@ def process_enhancement_coordinator(enhanced_data_id, original_data_list, schema
         # Create a group of chunk processing tasks
         # Each task processes one chunk in parallel
         chunk_tasks = group(
-            process_single_chunk_task.s(chunk, chunk_index, schema_dict, enhanced_data_id)
+            process_single_chunk_task.s(chunk, chunk_index, schema_dict)
             for chunk_index, chunk in enumerate(chunked_data)
         )
         
