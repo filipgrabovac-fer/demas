@@ -7,7 +7,6 @@ import { DataUploadForm } from "./data-upload-form/DataUploadForm.component";
 import { DataPreview } from "./data-preview/DataPreview.component";
 import type { ParsedData } from "./data-upload-form/data-upload-form.types";
 import type { ColumnMetadataMap } from "./data-preview/data-preview.types";
-import Link from "next/link";
 import { api } from "@/api/api";
 import {
 	convertToBackendFormat,
@@ -65,16 +64,11 @@ export default function DataEnhancementPage() {
 
 	return (
 		<div className="container mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-			<div className="mb-6 flex items-center justify-between sm:mb-8">
-				<div>
-					<h1 className="text-2xl font-bold sm:text-3xl">Data Enhancement</h1>
-					<p className="mt-2 text-sm text-muted-foreground sm:text-base">
-						Upload a CSV or JSON file to preview and enhance your data
-					</p>
-				</div>
-				<Link href="/data">
-					<Button variant="outline">View All Data</Button>
-				</Link>
+			<div className="mb-6 sm:mb-8">
+				<h1 className="text-2xl font-bold sm:text-3xl">Data Enhancement</h1>
+				<p className="mt-2 text-sm text-muted-foreground sm:text-base">
+					Upload a CSV or JSON file to preview and enhance your data
+				</p>
 			</div>
 
 			<div className="mb-6 sm:mb-8">

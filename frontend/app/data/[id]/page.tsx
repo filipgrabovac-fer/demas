@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { DataPreview } from "@/app/data-preview/DataPreview.component";
 import { api } from "@/api/api";
@@ -29,7 +28,9 @@ export default function DataDetailPage() {
 	const [error, setError] = useState<string | null>(null);
 	const [enhancedDataId, setEnhancedDataId] = useState<number | null>(null);
 	const [schemaFields, setSchemaFields] = useState<SchemaField[]>([]);
-	const schemaInitializedRef = useRef(false);
+	const [enhancementSchemaState, setEnhancementSchemaState] = useState<
+		SchemaField[] | null
+	>(null);
 
 	const enhancedDataFromList = useMemo(() => {
 		if (!enhancedDataList) return null;
@@ -109,6 +110,7 @@ export default function DataDetailPage() {
 				}),
 			);
 			// Sync external data (originalData schema) to component state
+			// This is necessary to sync external data to component state
 			// eslint-disable-next-line
 			setSchemaFields(fields);
 		}
@@ -120,6 +122,26 @@ export default function DataDetailPage() {
 			? (enhancedData.data as unknown as ParsedData)
 			: null;
 	}, [enhancedData]);
+
+	const reconstructedSchema = useMemo(() => {
+		if (
+			enhancedDataParsed &&
+			enhancedDataParsed.length > 0 &&
+			enhancedDataStatus === "complete" &&
+			!enhancementSchemaState
+		) {
+			const inferredSchema = inferSchema(enhancedDataParsed);
+			return Object.entries(inferredSchema).map(([name, type]) => ({
+				name,
+				type,
+				description: "",
+				isOriginal: false,
+			}));
+		}
+		return null;
+	}, [enhancedDataParsed, enhancedDataStatus, enhancementSchemaState]);
+
+	const enhancementSchema = reconstructedSchema || enhancementSchemaState;
 
 	const handleEnhance = async () => {
 		if (!originalDataParsed || originalDataParsed.length === 0) {
@@ -153,6 +175,8 @@ export default function DataDetailPage() {
 					};
 				}
 			}
+
+			setEnhancementSchemaState([...schemaFields]);
 
 			const result = (await enhanceMutation.mutateAsync({
 				original_data_id: id,
@@ -202,6 +226,7 @@ export default function DataDetailPage() {
 			await deleteMutation.mutateAsync({ id: enhancedData.id });
 
 			setEnhancedDataId(null);
+			setEnhancementSchemaState(null);
 
 			await queryClient.invalidateQueries({
 				queryKey: queries.dataOverview.getEnhancedDataList().queryKey,
@@ -239,27 +264,17 @@ export default function DataDetailPage() {
 				<div className="rounded-md border border-destructive bg-destructive/10 p-4 text-destructive">
 					Data not found
 				</div>
-				<div className="mt-4">
-					<Link href="/data">
-						<Button variant="outline">Back to Data Overview</Button>
-					</Link>
-				</div>
 			</div>
 		);
 	}
 
 	return (
 		<div className="container mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-			<div className="mb-6 flex items-center justify-between sm:mb-8">
-				<div>
-					<h1 className="text-2xl font-bold sm:text-3xl">Data #{id}</h1>
-					<p className="mt-2 text-sm text-muted-foreground sm:text-base">
-						Created: {new Date(originalData.created_at).toLocaleString()}
-					</p>
-				</div>
-				<Link href="/data">
-					<Button variant="outline">Back to Overview</Button>
-				</Link>
+			<div className="mb-6 sm:mb-8">
+				<h1 className="text-2xl font-bold sm:text-3xl">Data #{id}</h1>
+				<p className="mt-2 text-sm text-muted-foreground sm:text-base">
+					Created: {new Date(originalData.created_at).toLocaleString()}
+				</p>
 			</div>
 
 			{error && (
@@ -272,43 +287,73 @@ export default function DataDetailPage() {
 				<div className="space-y-6">
 					<div className="flex items-center justify-between">
 						<h2 className="text-xl font-semibold">Enhanced Data</h2>
-						<div className="flex gap-2">
-							<Button onClick={handleExportEnhanced} variant="outline">
-								Export Enhanced Data (CSV)
-							</Button>
-							<Button
-								onClick={handleDeleteEnhancedData}
-								variant="destructive"
-								disabled={deleteMutation.isPending}
-							>
-								{deleteMutation.isPending
-									? "Deleting..."
-									: "Delete Enhanced Data"}
-							</Button>
-						</div>
+						<button
+							type="button"
+							onClick={handleExportEnhanced}
+							className="text-sm text-primary underline hover:text-primary/80"
+						>
+							Export to CSV
+						</button>
 					</div>
 					<div className="rounded-md border border-green-500 bg-green-50 p-4 text-sm text-green-800 dark:bg-green-950 dark:text-green-200">
 						This data has been enhanced. You can view it below or export it.
 					</div>
-					<DataPreview data={enhancedDataParsed} columnMetadata={{}} />
+					<DataPreview
+						data={enhancedDataParsed}
+						columnMetadata={{}}
+						headerAction={
+							<button
+								type="button"
+								onClick={handleDeleteEnhancedData}
+								disabled={deleteMutation.isPending}
+								className="text-sm text-destructive underline hover:text-destructive/80 disabled:opacity-50"
+							>
+								{deleteMutation.isPending
+									? "Deleting..."
+									: "Delete Enhanced Data"}
+							</button>
+						}
+					/>
 
 					<div className="mt-6 border-t pt-6">
-						<h2 className="mb-4 text-xl font-semibold">Original Data</h2>
-						<div className="mb-4 flex justify-end">
-							<Button onClick={handleExportOriginal} variant="outline">
-								Export Original Data (CSV)
-							</Button>
+						<div className="mb-4 flex items-center justify-between">
+							<h2 className="text-xl font-semibold">Original Data</h2>
+							<button
+								type="button"
+								onClick={handleExportOriginal}
+								className="text-sm text-primary underline hover:text-primary/80"
+							>
+								Export to CSV
+							</button>
 						</div>
 						<DataPreview data={originalDataParsed} columnMetadata={{}} />
 					</div>
+
+					{enhancementSchema && enhancementSchema.length > 0 && (
+						<div className="mt-6 border-t pt-6">
+							<h3 className="mb-4 text-lg font-semibold">Enhancement Schema</h3>
+							<p className="mb-4 text-sm text-muted-foreground">
+								Schema used for data enhancement
+							</p>
+							<SchemaEditor
+								fields={enhancementSchema}
+								onFieldsChange={() => {}}
+								readonly={true}
+							/>
+						</div>
+					)}
 				</div>
 			) : isPending ? (
 				<div className="space-y-6">
 					<div className="flex items-center justify-between">
 						<h2 className="text-xl font-semibold">Original Data</h2>
-						<Button onClick={handleExportOriginal} variant="outline">
-							Export Original Data (CSV)
-						</Button>
+						<button
+							type="button"
+							onClick={handleExportOriginal}
+							className="text-sm text-primary underline hover:text-primary/80"
+						>
+							Export to CSV
+						</button>
 					</div>
 					<DataPreview data={originalDataParsed} columnMetadata={{}} />
 					<div className="rounded-md border border-blue-500 bg-blue-50 p-4 text-sm text-blue-800 dark:bg-blue-950 dark:text-blue-200">
@@ -322,24 +367,29 @@ export default function DataDetailPage() {
 				<div className="space-y-6">
 					<div className="flex items-center justify-between">
 						<h2 className="text-xl font-semibold">Original Data</h2>
-						<Button onClick={handleExportOriginal} variant="outline">
-							Export Original Data (CSV)
-						</Button>
+						<button
+							type="button"
+							onClick={handleExportOriginal}
+							className="text-sm text-primary underline hover:text-primary/80"
+						>
+							Export to CSV
+						</button>
 					</div>
 					<DataPreview data={originalDataParsed} columnMetadata={{}} />
 					<div className="rounded-md border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
 						Enhancement failed. Please try again.
 					</div>
 					<div className="flex justify-center gap-2 mb-6">
-						<Button
+						<button
+							type="button"
 							onClick={handleDeleteEnhancedData}
-							variant="destructive"
 							disabled={deleteMutation.isPending}
+							className="text-sm text-destructive underline hover:text-destructive/80 disabled:opacity-50"
 						>
 							{deleteMutation.isPending
 								? "Deleting..."
 								: "Delete Enhanced Data"}
-						</Button>
+						</button>
 					</div>
 					<div className="rounded-md border border-border p-6">
 						<h3 className="mb-4 text-lg font-semibold">Edit Schema</h3>
@@ -375,9 +425,13 @@ export default function DataDetailPage() {
 				<div className="space-y-6">
 					<div className="flex items-center justify-between">
 						<h2 className="text-xl font-semibold">Original Data</h2>
-						<Button onClick={handleExportOriginal} variant="outline">
-							Export Original Data (CSV)
-						</Button>
+						<button
+							type="button"
+							onClick={handleExportOriginal}
+							className="text-sm text-primary underline hover:text-primary/80"
+						>
+							Export to CSV
+						</button>
 					</div>
 					<DataPreview data={originalDataParsed} columnMetadata={{}} />
 

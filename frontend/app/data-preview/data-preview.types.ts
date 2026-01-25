@@ -12,4 +12,5 @@ export type DataPreviewProps = {
 	data: ParsedData | null;
 	columnMetadata?: ColumnMetadataMap;
 	onColumnMetadataChange?: (metadata: ColumnMetadataMap) => void;
+	headerAction?: React.ReactNode;
 };

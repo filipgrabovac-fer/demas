@@ -10,7 +10,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+
 import type { DataPreviewProps, ColumnMetadataMap } from "./data-preview.types";
 import {
 	initializeColumnMetadata,
@@ -22,11 +22,10 @@ export const DataPreview = ({
 	data,
 	columnMetadata,
 	onColumnMetadataChange,
+	headerAction,
 }: DataPreviewProps) => {
 	const [editingColumn, setEditingColumn] = useState<string | null>(null);
-	const [editingDescription, setEditingDescription] = useState<string | null>(
-		null,
-	);
+
 	const [localMetadata, setLocalMetadata] = useState<ColumnMetadataMap>({});
 
 	useEffect(() => {
@@ -108,21 +107,7 @@ export const DataPreview = ({
 		setEditingColumn(null);
 	};
 
-	const handleDescriptionChange = (
-		originalName: string,
-		description: string,
-	) => {
-		const updated = { ...localMetadata };
-		if (updated[originalName]) {
-			updated[originalName] = {
-				...updated[originalName],
-				description,
-			};
-			setLocalMetadata(updated);
-			onColumnMetadataChange?.(updated);
-		}
-		setEditingDescription(null);
-	};
+
 
 	const getOriginalName = (displayName: string): string => {
 		const entry = Object.entries(localMetadata).find(
@@ -144,24 +129,18 @@ export const DataPreview = ({
 
 	return (
 		<div className="flex flex-col gap-3 sm:gap-4">
-			<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+			<div className="flex items-center justify-between">
 				<h2 className="text-base font-semibold sm:text-lg">Data Preview</h2>
-				<div className="text-xs text-muted-foreground sm:text-sm">
-					{showingAll
-						? `Showing all ${totalRows} rows`
-						: `Showing first 100 of ${totalRows} rows`}
-				</div>
+				{headerAction}
 			</div>
-			<div className="max-h-[400px] overflow-auto rounded-md border border-border sm:max-h-[600px]">
-				<div className="min-w-full overflow-x-auto">
-					<Table>
+			<div className="overflow-x-auto overflow-y-auto max-h-[400px] sm:max-h-[600px] rounded-md border border-border scrollbar-visible">
+				<Table className="min-w-max">
 						<TableHeader>
 							<TableRow>
 								{displayColumns.map((displayName) => {
 									const meta = getMetadata(displayName);
 									const originalName = meta.originalName;
 									const isEditing = editingColumn === originalName;
-									const isEditingDesc = editingDescription === originalName;
 
 									return (
 										<TableHead
@@ -212,75 +191,11 @@ export const DataPreview = ({
 															>
 																{meta.displayName}
 															</span>
-															{meta.description && (
-																<button
-																	type="button"
-																	onClick={() =>
-																		setEditingDescription(
-																			editingDescription === originalName
-																				? null
-																				: originalName,
-																		)
-																	}
-																	className="ml-1 text-muted-foreground hover:text-foreground"
-																	title={meta.description}
-																>
-																	ℹ️
-																</button>
-															)}
-															{!meta.description && (
-																<button
-																	type="button"
-																	onClick={() =>
-																		setEditingDescription(originalName)
-																	}
-																	className="ml-1 text-muted-foreground hover:text-foreground opacity-50 hover:opacity-100"
-																	title="Add description"
-																>
-																	+
-																</button>
-															)}
+		
 														</>
 													)}
 												</div>
-												{isEditingDesc && (
-													<div className="mt-1 flex flex-col gap-1">
-														<Textarea
-															value={meta.description}
-															onChange={(e) => {
-																const updated = { ...localMetadata };
-																if (updated[originalName]) {
-																	updated[originalName] = {
-																		...updated[originalName],
-																		description: e.target.value,
-																	};
-																	setLocalMetadata(updated);
-																}
-															}}
-															onBlur={() => {
-																handleDescriptionChange(
-																	originalName,
-																	meta.description,
-																);
-															}}
-															onKeyDown={(e) => {
-																if (e.key === "Escape") {
-																	setEditingDescription(null);
-																}
-															}}
-															placeholder="Enter column description..."
-															className="min-h-[60px] text-xs sm:text-sm"
-															autoFocus
-														/>
-														<button
-															type="button"
-															onClick={() => setEditingDescription(null)}
-															className="self-end text-xs text-muted-foreground hover:text-foreground"
-														>
-															Close
-														</button>
-													</div>
-												)}
+	
 											</div>
 										</TableHead>
 									);
@@ -337,8 +252,12 @@ export const DataPreview = ({
 								</TableRow>
 							))}
 						</TableBody>
-					</Table>
-				</div>
+				</Table>
+			</div>
+			<div className="text-xs text-muted-foreground sm:text-sm">
+				{showingAll
+					? `Showing all ${totalRows} rows`
+					: `Showing first 100 of ${totalRows} rows`}
 			</div>
 		</div>
 	);

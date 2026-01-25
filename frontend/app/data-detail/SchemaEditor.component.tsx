@@ -9,6 +9,7 @@ export type SchemaEditorProps = {
 	fields: SchemaField[];
 	onFieldsChange: (fields: SchemaField[]) => void;
 	originalFieldNames?: string[];
+	readonly?: boolean;
 };
 
 const toSnakeCase = (input: string): string => {
@@ -22,7 +23,11 @@ const toSnakeCase = (input: string): string => {
 		.toLowerCase();
 };
 
-export const SchemaEditor = ({ fields, onFieldsChange }: SchemaEditorProps) => {
+export const SchemaEditor = ({
+	fields,
+	onFieldsChange,
+	readonly = false,
+}: SchemaEditorProps) => {
 	const [userInputs, setUserInputs] = useState<Record<number, string>>({});
 	const [touchedFields, setTouchedFields] = useState<Set<number>>(new Set());
 
@@ -161,14 +166,16 @@ export const SchemaEditor = ({ fields, onFieldsChange }: SchemaEditorProps) => {
 		<div className="space-y-4">
 			<div className="flex items-center justify-between">
 				<Label className="text-base font-semibold">Schema Fields</Label>
-				<Button
-					onClick={handleAddField}
-					type="button"
-					size="sm"
-					disabled={!canAddNewField}
-				>
-					Add Field
-				</Button>
+				{!readonly && (
+					<Button
+						onClick={handleAddField}
+						type="button"
+						size="sm"
+						disabled={!canAddNewField}
+					>
+						Add Field
+					</Button>
+				)}
 			</div>
 
 			{fields.length === 0 ? (
@@ -186,7 +193,9 @@ export const SchemaEditor = ({ fields, onFieldsChange }: SchemaEditorProps) => {
 						return (
 							<div
 								key={`field-${index}-${field.isOriginal ? "orig" : "new"}`}
-								className="flex flex-col gap-4 rounded-md border border-border bg-background p-4"
+								className={`flex flex-col gap-4 rounded-md border border-border p-4 ${
+									readonly ? "bg-muted/30" : "bg-background"
+								}`}
 							>
 								<div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-4">
 									<div className="flex-1">
@@ -200,9 +209,12 @@ export const SchemaEditor = ({ fields, onFieldsChange }: SchemaEditorProps) => {
 											id={`field-name-${index}`}
 											value={userInput}
 											onChange={(e) => {
-												handleFieldNameChange(index, e.target.value);
+												if (!readonly) {
+													handleFieldNameChange(index, e.target.value);
+												}
 											}}
 											placeholder="Enter field name (e.g., New Field Name)"
+											disabled={readonly}
 											className={
 												nameError
 													? "border-destructive focus-visible:ring-destructive"
@@ -217,23 +229,33 @@ export const SchemaEditor = ({ fields, onFieldsChange }: SchemaEditorProps) => {
 												</code>
 											</p>
 										)}
-										{nameError && (
+										{readonly && field.type && (
+											<p className="mt-1 text-xs text-muted-foreground">
+												Type:{" "}
+												<code className="rounded bg-muted px-1 py-0.5 text-xs font-mono">
+													{field.type}
+												</code>
+											</p>
+										)}
+										{nameError && !readonly && (
 											<p className="mt-1 text-xs text-destructive">
 												{nameError}
 											</p>
 										)}
 									</div>
-									<div className="flex items-start sm:items-center">
-										<Button
-											variant="ghost"
-											size="sm"
-											onClick={() => handleRemoveField(index)}
-											type="button"
-											className="text-destructive hover:text-destructive"
-										>
-											Remove
-										</Button>
-									</div>
+									{!readonly && (
+										<div className="flex items-start sm:items-center">
+											<Button
+												variant="ghost"
+												size="sm"
+												onClick={() => handleRemoveField(index)}
+												type="button"
+												className="text-destructive hover:text-destructive"
+											>
+												Remove
+											</Button>
+										</div>
+									)}
 								</div>
 								<div className="flex-1">
 									<Label
@@ -245,10 +267,13 @@ export const SchemaEditor = ({ fields, onFieldsChange }: SchemaEditorProps) => {
 									<Textarea
 										id={`field-description-${index}`}
 										value={field.description}
-										onChange={(e) =>
-											handleFieldDescriptionChange(index, e.target.value)
-										}
+										onChange={(e) => {
+											if (!readonly) {
+												handleFieldDescriptionChange(index, e.target.value);
+											}
+										}}
 										placeholder="Describe what this field should contain"
+										disabled={readonly}
 										className="min-h-[60px]"
 									/>
 								</div>

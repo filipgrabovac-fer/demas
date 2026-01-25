@@ -77,3 +77,35 @@ body {
   color: hsl(var(--foreground));
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
+
+/* Always visible scrollbars for data tables */
+.scrollbar-visible {
+  overflow-x: scroll !important;
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.5) hsl(var(--border));
+}
+
+.scrollbar-visible::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+  display: block;
+}
+
+.scrollbar-visible::-webkit-scrollbar-track {
+  background: hsl(var(--border));
+  border-radius: 5px;
+}
+
+.scrollbar-visible::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--muted-foreground) / 0.5);
+  border-radius: 5px;
+  border: 2px solid hsl(var(--border));
+}
+
+.scrollbar-visible::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--muted-foreground) / 0.7);
+}
+
+.scrollbar-visible::-webkit-scrollbar-corner {
+  background: hsl(var(--border));
+}
