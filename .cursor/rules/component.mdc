@@ -93,5 +93,33 @@ export const FieldWrapper = ({
 * **Clean Output:** **Do not** add comments explaining your reasoning or "thought process" inside the code. The code must be clean, readable, and self-explanatory.
 * **No Over-engineering:** Keep the code simple. Only create the complex file structure (logic, types, api) if strictly necessary.
 * **Avoid exporting components through index.ts:** This approach is unused and should be avoided completely.
-* **Type definition:** Always use types (if possible) through `components["schema"]["type_name"]` from schema.d.ts file. If the required type does not exist, define it yourself inside .types.ts file.
+* **Type definition:** Always use types (if possible) through `components["schema"]["TypeName"]` from schema.d.ts file. If the required type does not exist, define it yourself inside .types.ts file.
 ---
+
+## 3. Form Implementation Example
+
+Example of defining a form for a specific component which uses forms: define default values, proper validation schemas using zod and proper form hook.
+
+```typescript
+import { useForm } from "@tanstack/react-form";
+import { type IntroFormDefaultValuesType, introSchema } from "../intro";
+
+export const introDefaultValues: IntroFormDefaultValuesType = {
+	consent: false,
+};
+
+export const useIntroForm = ({
+	defaultValues,
+	onSubmit,
+}: {
+	defaultValues?: IntroFormDefaultValuesType;
+	onSubmit?: ({ value }: { value: IntroFormDefaultValuesType }) => void;
+}) =>
+	useForm({
+		defaultValues: defaultValues ?? introDefaultValues,
+		onSubmit,
+		validators: {
+			onBlur: introSchema,
+		},
+	});
+```

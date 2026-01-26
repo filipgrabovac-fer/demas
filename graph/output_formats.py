@@ -66,13 +66,3 @@ def build_dynamic_model(
     model = create_model(model_name, **fields)
     _model_cache[cache_key] = model
     return model
-
-DummyData = build_dynamic_model({
-    "id": {"type": "int", "description": "The id of the company"},
-    "company_name": {"type": "str", "description": "The name of the company"},
-    "industry": {"type": "str", "description": "The industry of the company"},
-    "ceo": {"type": "str", "description": "The CEO of the company"},
-    "founded_year": {"type": "int", "description": "The year the company was founded"},
-    "age": {"type": "int", "description": "The age of the company"},
-    "ceo_net_worth": {"type": "int", "description": "The net worth of the CEO"},
-})

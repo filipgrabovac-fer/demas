@@ -11,3 +11,14 @@
 16.1.2026.
 - dodati description polja u kontekst samog grafa
 - dodati tipove po polju
+
+
+
+
+25.12.2026.
+- remove View All Data button and Back to overview button
+- make export data to csv more implicit instead of big buttons (link, text with underline that says export to csv")
+- add horizontal scroll bar on both enhanced and original data
+- make the whole app mobile friendly and rebuild with the mobile-first approach
+
+
