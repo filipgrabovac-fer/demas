@@ -115,27 +115,21 @@ def process_enhancement_coordinator(enhanced_data_id, original_data_list, schema
     Uses Celery group and chord pattern to process chunks in parallel and collect results.
     """
     try:
-        # Chunk the data (10 records per chunk)
         chunked_data = CsvChunker(original_data_list, 10).chunk()
         total_chunks = len(chunked_data)
         
         if total_chunks == 0:
-            # No data to process
             from models.enhanced_data import EnhancedData
             enhanced_data_obj = EnhancedData.objects.get(id=enhanced_data_id)
             enhanced_data_obj.status = "failed"
             enhanced_data_obj.save()
             return
         
-        # Create a group of chunk processing tasks
-        # Each task processes one chunk in parallel
         chunk_tasks = group(
             process_single_chunk_task.s(chunk, chunk_index, schema_dict)
             for chunk_index, chunk in enumerate(chunked_data)
         )
         
-        # Use chord to run collector after all chunks complete
-        # The collector will receive results from all chunk tasks
         chord(chunk_tasks)(collect_chunk_results.s(enhanced_data_id, total_chunks))
         
     except Exception as e:
@@ -166,14 +160,11 @@ def collect_chunk_results(chunk_results, enhanced_data_id, total_chunks):
         
         enhanced_data_obj = EnhancedData.objects.get(id=enhanced_data_id)
         
-        # Sort results by chunk_index to maintain original data order
-        # Results from chord may not be in order (they complete at different times)
         sorted_results = sorted(
             chunk_results,
             key=lambda x: x.get("chunk_index", 0) if isinstance(x, dict) else 0
         )
         
-        # Combine successful chunks
         combined_enhanced_data = []
         successful_chunks = 0
         failed_chunks = 0
@@ -189,14 +180,12 @@ def collect_chunk_results(chunk_results, enhanced_data_id, total_chunks):
                     chunk_idx = result.get("chunk_index", "unknown")
                     print(f"Chunk {chunk_idx} failed: {error}")
         
-        # Strategy C: Only fail if ALL chunks failed
         if not combined_enhanced_data:
             enhanced_data_obj.status = "failed"
             enhanced_data_obj.save()
             print(f"Enhancement failed: All {total_chunks} chunks failed")
             return
         
-        # Save combined results
         enhanced_data_obj.data = combined_enhanced_data
         enhanced_data_obj.status = "complete"
         enhanced_data_obj.save()
