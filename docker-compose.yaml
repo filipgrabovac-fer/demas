@@ -3,6 +3,7 @@ x-common: &common
     - .env
   networks:
     - demas-network
+    - dokploy-network
 
 services:
   redis:
@@ -72,3 +73,6 @@ volumes:
 networks:
   demas-network:
     driver: bridge
+
+  dokploy-network:
+    external: true
