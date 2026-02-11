@@ -64,8 +64,7 @@ services:
     command: pnpm start --port 3001
     ports:
       - "3001:3001"
-
-
+      
 volumes:
   redis_data:
   app_data:
