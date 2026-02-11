@@ -60,9 +60,9 @@ services:
       dockerfile: dockerfile
       target: frontend-runner
     working_dir: /app/frontend
-    command: pnpm start --port 3000
+    command: pnpm start --port 3001
     ports:
-      - "3000:3000"
+      - "3001:3001"
 
 
 volumes:
