@@ -31,12 +31,10 @@ services:
       context: .
       dockerfile: dockerfile
       target: django-runner
-    working_dir: /app/src
 
   celery-worker:
     <<: *common
     container_name: celery-worker
-    working_dir: /app/src
     build:
       context: .
       dockerfile: dockerfile
