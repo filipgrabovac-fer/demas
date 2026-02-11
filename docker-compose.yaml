@@ -32,8 +32,6 @@ services:
       dockerfile: dockerfile
       target: django-runner
     working_dir: /app/src
-    volumes:
-      - .:/app/
 
   celery-worker:
     <<: *common
@@ -48,8 +46,6 @@ services:
         condition: service_healthy
       django:
         condition: service_started
-    volumes:
-      - .:/app/
     command: uv run celery -A main.celery worker --loglevel=info --concurrency=5
     restart: unless-stopped
 
@@ -67,10 +63,9 @@ services:
     command: pnpm start --port 3001
     ports:
       - "3001:3001"
-      
+
 volumes:
   redis_data:
-  app_data:
 
 networks:
   demas-network:
