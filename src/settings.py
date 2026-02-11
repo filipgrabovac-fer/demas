@@ -28,6 +28,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-yg(9x=g#j!$n%^-p+h_a6bjd@yc1vjs17h)-1-zm*(u7n3w4gn'
 
 
+FRONTEND_BUILD_DIR = Path(__file__).resolve().parent.parent / "frontend" / "dist"
 # Application definition
 
 INSTALLED_APPS = [

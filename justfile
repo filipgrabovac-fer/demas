@@ -10,3 +10,6 @@ local-up-build:
 
 local-build:
 	docker compose build
+
+local-down:
+	docker compose down

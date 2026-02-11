@@ -9,7 +9,12 @@ export const INTERNAL__usePostOriginalData = () => {
 			schema?: Record<string, "int" | "str" | "bool" | "float">;
 		}) => {
 			const response = await apiClientFetch.POST("/api/original-data/", {
-				body: data,
+				body: {
+					...data,
+					id: 1,
+					created_at: new Date().toISOString(),
+					updated_at: new Date().toISOString(),
+				},
 			});
 			return response.data;
 		},

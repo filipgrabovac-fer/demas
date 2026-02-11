@@ -1,9 +1,13 @@
+x-common: &common
+  env_file:
+    - .env
+  networks:
+    - demas-network
+
 services:
   redis:
-    container_name: redis
+    container_name: demas-redis
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
     volumes:
       - redis_data:/data
     command: redis-server --appendonly yes
@@ -13,43 +17,58 @@ services:
       timeout: 3s
       retries: 5
 
-  django-backend:
-    container_name: django-backend
-    build:
-      context: .
-      dockerfile: dockerfile
+  django:
+    <<: *common
+    container_name: demas-django
     ports:
       - "8000:8000"
     depends_on:
       redis:
         condition: service_healthy
-    env_file:
-      - .env
-    environment:
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
     command: uv run manage.py runserver 0.0.0.0:8000
+    build:
+      context: .
+      dockerfile: dockerfile
+      target: django-runner
+    working_dir: /app/src
     volumes:
       - .:/app/
 
   celery-worker:
+    <<: *common
     container_name: celery-worker
+    working_dir: /app/src
     build:
       context: .
       dockerfile: dockerfile
+      target: django-runner
     depends_on:
       redis:
         condition: service_healthy
-      django-backend:
+      django:
         condition: service_started
-    env_file:
-      - .env
-    environment:
-      - DJANGO_SETTINGS_MODULE=settings
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    volumes:
+      - .:/app/
     command: uv run celery -A main.celery worker --loglevel=info --concurrency=5
     restart: unless-stopped
+
+  frontend:
+    <<: *common
+    container_name: demas-frontend
+    build:
+      context: .
+      dockerfile: dockerfile
+      target: frontend-runner
+    working_dir: /app/frontend
+    command: pnpm start --port 3000
+    ports:
+      - "3000:3000"
+
+
 volumes:
   redis_data:
   app_data:
+
+networks:
+  demas-network:
+    driver: bridge

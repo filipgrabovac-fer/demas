@@ -1,11 +1,20 @@
-FROM astral/uv:python3.12-bookworm-slim
+FROM astral/uv:python3.12-bookworm-slim as django-runner
 
 WORKDIR /app
 
-COPY . .
+COPY src/ .
 
 RUN uv sync
 
-EXPOSE 8000
 
-CMD ["uv", "run", "manage.py", "runserver", "0.0.0.0:8000"]
+FROM node:22-slim as frontend-runner
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+WORKDIR /app
+
+COPY frontend/package.json frontend/pnpm-lock.yaml ./
+
+RUN pnpm install --frozen-lockfile
+
+COPY frontend/ ./

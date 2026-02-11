@@ -22,3 +22,12 @@
 - make the whole app mobile friendly and rebuild with the mobile-first approach
 
 
+GitHub
+- mhorvat
+
+
+
+
+
+- solo implementacija scrapinga?
+- threshold racunanje
