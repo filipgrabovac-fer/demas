@@ -54,6 +54,8 @@ services:
       context: .
       dockerfile: dockerfile
       target: frontend-runner
+      args:
+        - NEXT_PUBLIC_BACKEND_API_URL=${NEXT_PUBLIC_BACKEND_API_URL:-http://localhost:8000}
     working_dir: /app/frontend
     environment:
       - BACKEND_API_URL=http://demas-django:8000
