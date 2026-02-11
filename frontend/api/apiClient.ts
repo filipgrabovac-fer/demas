@@ -3,11 +3,11 @@ import createClient, { type Middleware } from "openapi-fetch";
 import type { paths } from "./schema";
 
 export const baseApiUrl =
-	typeof window !== "undefined" && window.location.origin.includes("localhost")
-		? "http://localhost:8000"
-		: typeof window !== "undefined"
-			? window.location.origin
-			: "http://localhost:8000";
+	typeof window !== "undefined"
+		? (process.env.NEXT_PUBLIC_BACKEND_API_URL ?? "http://localhost:8000")
+		: (process.env.BACKEND_API_URL ??
+				process.env.NEXT_PUBLIC_BACKEND_API_URL ??
+				"http://localhost:8000");
 
 export const includeCookiesMiddleware: Middleware = {
 	onRequest({ request }) {
